@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MindMate | Your Mental Health Companion</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <link rel="icon" href="https://raw.githubusercontent.com/AnandJV/mindmate-chatbot/main/images/logo.png" type="image/png">
+
+  <style>
+    /* Global Styles & Glassmorphism */
+    body {
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+      color: #e5e7eb;
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+      margin: 0;
+      position: relative;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 2.5rem;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+    .glass-sm {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.2);
+    }
+    .glass-input {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(5px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Animations */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(80px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes popIn { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes bounceSlow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    @keyframes pulseGlow { 0% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.5); } 50% { box-shadow: 0 0 25px rgba(99, 102, 241, 0.8); } 100% { box-shadow: 0 0 10px rgba(99, 102, 241, 0.5); } }
+    .animate-fadeIn { animation: fadeIn 1.2s ease-out; }
+    .animate-slideUp { animation: slideUp 0.8s ease-out; }
+    .animate-popIn { animation: popIn 0.6s ease-out; }
+    .animate-bounceSlow { animation: bounceSlow 3s ease-in-out infinite; }
+    .animate-chartIn { animation: popIn 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.27); }
+    .animate-pulseGlow { animation: pulseGlow 2.5s infinite ease-in-out; }
+
+    /* Typing Indicator */
+    .typing::after { content: '.'; animation: typing 2s infinite; }
+    @keyframes typing { 0%, 100% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
+
+    /* Scrollbar */
+    .scrollbar-thin::-webkit-scrollbar { width: 8px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.5); border-radius: 4px; }
+    .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: rgba(99, 102, 241, 0.7); }
+
+    /* Layout & Sidebar */
+    #sidebar {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 52, 96, 0.98);
+      backdrop-filter: blur(20px);
+      width: 300px;
+      max-width: 80vw;
+      padding: 2.5rem 1.75rem 3.5rem;
+      z-index: 999;
+      overflow-y: auto;
+      transition: transform 0.4s ease;
+      transform: translateX(-100%);
+      display: flex;
+      flex-direction: column;
+    }
+    #sidebar.show { transform: translateX(0); }
+    @media (min-width: 768px) {
+      #sidebar {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        transform: none !important;
+        overflow-y: visible;
+        flex-shrink: 0;
+      }
+      main { display: flex; }
+      #content { flex: 1; padding: 2.5rem; }
+    }
+    #sidebar nav { flex-grow: 1; }
+    #sidebar nav a {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.8rem;
+      font-weight: 600;
+      color: #c7d2fe;
+      padding: 0.9rem 1.2rem;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+    #sidebar nav a i { margin-right: 12px; width: 20px; text-align: center; }
+    #sidebar nav a.active, #sidebar nav a:hover {
+      background-color: #4f46e5;
+      color: #eef2ff;
+      transform: translateX(5px);
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+    }
+    #sidebar .close-btn {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      background: transparent;
+      border: none;
+      font-size: 2.75rem;
+      color: #a5b4fc;
+      cursor: pointer;
+      transition: color 0.4s ease, transform 0.3s ease;
+    }
+    #sidebar .close-btn:hover { color: #6366f1; transform: rotate(90deg); }
+
+    /* Landing & Mood Picker */
+    .hero-title {
+      background: linear-gradient(90deg, #60a5fa, #a78bfa, #d946ef);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .mood-btn {
+      background: rgba(99, 102, 241, 0.3);
+      border: 3px solid #6366f1;
+      border-radius: 50%;
+      width: 80px;
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.4s ease;
+      font-size: 2.5rem;
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+    }
+    .mood-btn:hover { transform: scale(1.15); box-shadow: 0 0 30px #6366f1; }
+    .mood-btn.selected {
+      background: #6366f1;
+      border-color: #a78bfa;
+      transform: scale(1.2);
+      box-shadow: 0 0 40px #6366f1;
+    }
+
+    /* Chat Styles */
+    .chat-bubble-user, .chat-bubble-bot {
+      transition: all 0.4s ease;
+      border-radius: 18px;
+      padding: 14px 18px;
+      max-width: 85%;
+      word-break: break-word;
+      animation: popIn 0.6s ease-out;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    .chat-bubble-user { background-color: rgba(34, 197, 94, 0.3); margin-left: auto; margin-right: 10px; }
+    .chat-bubble-bot { background-color: rgba(99, 102, 241, 0.3); margin-left: 10px; }
+    #chatSection .chat-input-container {
+      width: 100%;
+      justify-content: space-between;
+      align-items: center;
+      display: flex;
+      flex-wrap: nowrap;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 50px;
+      min-height: 70px;
+      gap: 0.5rem;
+      box-sizing: border-box;
+    }
+    #chatSection input[type="text"] {
+      flex-grow: 1;
+      border-radius: 50px;
+      border: 2px solid #6366f1;
+      padding: 1rem 1.5rem;
+      font-size: 1.1rem;
+      color: #000000;
+      background: #ffffff;
+      transition: all 0.4s ease;
+      min-width: auto;
+      box-sizing: border-box;
+      outline: none;
+      margin: 0 0.5rem;
+    }
+    #chatSection input[type="text"]:focus {
+      box-shadow: 0 0 15px rgba(99, 102, 241, 1);
+      transform: scale(1.005);
+      border-color: #4f46e5;
+    }
+    #send, #record, #emoji-btn {
+      flex-shrink: 0;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      padding: 0;
+      border-radius: 50%;
+      transition: all 0.4s ease;
+      cursor: pointer;
+      color: white;
+    }
+    #send { background-color: #22c55e; }
+    #record { background-color: #6366f1; }
+    #emoji-btn { background-color: #f97316; }
+    #send:hover, #record:hover, #emoji-btn:hover { transform: scale(1.1); box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+    #record.active { background-color: #ef4444; animation: pulse 1s infinite; }
+    .emoji-picker-container {
+      position: absolute;
+      bottom: 80px;
+      left: 10px;
+      background: rgba(30, 41, 59, 0.95);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 1rem;
+      z-index: 10;
+      width: 280px;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.5rem;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+      animation: slideUp 0.3s ease-out;
+    }
+    .emoji-picker-container button {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+      padding: 0.2rem;
+      border-radius: 4px;
+      text-align: center;
+    }
+    .emoji-picker-container button:hover {
+      transform: scale(1.2);
+      background-color: rgba(99, 102, 241, 0.2);
+    }
+
+    /* Analytics & Charts */
+    #analyticsSection .chart-container {
+      height: 400px;
+      min-height: 400px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      transition: transform 0.3s ease;
+    }
+
+    /* Journaling & CBT */
+    #journalSection textarea {
+      min-height: 200px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 1rem;
+      color: #e5e7eb;
+      resize: vertical;
+      transition: all 0.3s;
+    }
+    #journalSection textarea:focus {
+      outline: none;
+      border-color: #6366f1;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    }
+    .journal-entry {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+      transition: background-color 0.3s;
+    }
+    .journal-entry:hover {
+      background-color: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+    }
+    .cbt-exercise-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .cbt-exercise-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Pulse Animation for Recording */
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+  </style>
+</head>
+<body class="relative">
+  <canvas id="particleCanvas" class="fixed inset-0 -z-10 pointer-events-none"></canvas>
+
+  <section id="landingPage" class="min-h-screen flex items-center justify-center text-center animate-fadeIn p-6">
+    <div class="container">
+      <h1 class="hero-title text-6xl md:text-7xl font-extrabold mb-6">Welcome to MindMate</h1>
+      <p class="text-xl md:text-2xl text-indigo-200 max-w-3xl mx-auto mb-10">Your AI-powered sanctuary for mental wellness. Chat with empathy, track moods, and unlock insights with Cognitive Behavioral Therapy (CBT) techniques.</p>
+      <div class="flex justify-center space-x-6">
+        <button id="showLoginLanding" aria-label="Login to MindMate" class="bg-indigo-600 text-white py-4 px-8 rounded-full shadow-lg hover:bg-indigo-700 transition transform hover:scale-105 animate-bounceSlow" style="animation-delay: 0s;">
+          <i class="fas fa-sign-in-alt mr-2"></i> Login
+        </button>
+        <button id="showSignupLanding" aria-label="Signup for MindMate" class="bg-transparent border-2 border-indigo-500 text-indigo-300 py-4 px-8 rounded-full hover:bg-indigo-900 transition transform hover:scale-105 animate-bounceSlow" style="animation-delay: 0.2s;">
+          <i class="fas fa-user-plus mr-2"></i> Signup
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section id="moodPicker" class="min-h-screen flex items-center justify-center text-center animate-slideUp hidden p-6">
+    <div class="container glass p-10 max-w-lg shadow-2xl">
+      <h2 class="text-3xl font-bold mb-10 text-gray-200">How are you feeling today?</h2>
+      <div class="flex justify-center space-x-6 md:space-x-10">
+        <button class="moodBtn mood-btn bg-yellow-600/50 hover:bg-yellow-600/70" data-mood="joy" title="Joy" aria-label="Select mood: Joy">😊</button>
+        <button class="moodBtn mood-btn bg-blue-600/50 hover:bg-blue-600/70" data-mood="sadness" title="Sadness" aria-label="Select mood: Sadness">😢</button>
+        <button class="moodBtn mood-btn bg-red-600/50 hover:bg-red-600/70" data-mood="fear" title="Fear" aria-label="Select mood: Fear">😟</button>
+        <button class="moodBtn mood-btn bg-purple-600/50 hover:bg-purple-600/70" data-mood="annoyance" title="Annoyance" aria-label="Select mood: Annoyance">😣</button>
+      </div>
+      <p class="text-sm text-indigo-300 mt-8">Selecting a mood helps MindMate personalize your session.</p>
+    </div>
+  </section>
+
+  <main id="mainApp" class="hidden">
+    <div class="flex min-h-screen">
+      <aside id="sidebar" class="hidden md:flex">
+        <button class="close-btn md:hidden" id="closeSidebar" aria-label="Close sidebar">&times;</button>
+        <h2 class="text-indigo-300 font-extrabold text-4xl mb-12">MindMate</h2>
+        <nav class="mb-10">
+          <a href="#" id="showDashboard" class="active" aria-current="page"><i class="fas fa-home"></i> Dashboard</a>
+          <a href="#" id="showChat"><i class="fas fa-comments"></i> Chat</a>
+          <a href="#" id="showAnalytics"><i class="fas fa-chart-line"></i> Analytics</a>
+          <a href="#" id="showCBT"><i class="fas fa-brain"></i> CBT Exercises</a>
+          <a href="#" id="showJournal"><i class="fas fa-book-open"></i> Journal</a>
+          <a href="#" id="showProfile"><i class="fas fa-user-circle"></i> Profile</a>
+        </nav>
+        <button id="logout" class="bg-red-600 hover:bg-red-700 text-white w-full py-3 rounded-xl font-semibold transition transform hover:scale-[1.02] shadow-lg mt-auto">
+          <i class="fas fa-sign-out-alt mr-2"></i> Logout
+        </button>
+      </aside>
+      
+      <div id="content" class="flex-1 p-0 md:p-10">
+        <section id="dashboardSection" class="p-6 glass animate-fadeIn">
+          <h2 class="text-4xl font-extrabold mb-4 text-gray-100">Hello, <span id="dashboardUsername">User</span>! 👋</h2>
+          <p class="text-xl text-indigo-300 mb-8">Your path to wellness starts here. Let's check in.</p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="glass-sm text-center shadow-xl">
+              <p class="text-6xl font-extrabold text-green-400 mb-3" id="moodSummary">😊</p>
+              <p class="text-lg font-semibold text-indigo-200">Today's Mood</p>
+            </div>
+            <div class="glass-sm text-center shadow-xl">
+              <p class="text-6xl font-extrabold text-pink-400 mb-3">5</p>
+              <p class="text-lg font-semibold text-indigo-200">Sessions this Week</p>
+            </div>
+            <div class="glass-sm text-center shadow-xl">
+              <p class="text-6xl font-extrabold text-yellow-400 mb-3">14 Days</p>
+              <p class="text-lg font-semibold text-indigo-200">Wellness Streak</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="glass p-8">
+              <h3 class="text-2xl font-bold mb-4 text-indigo-300">Quick Actions</h3>
+              <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                <button class="bg-green-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-green-700 transition shadow-md" id="dashboardStartChat">
+                  <i class="fas fa-paper-plane mr-2"></i> Start New Chat
+                </button>
+                <button class="bg-pink-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-pink-700 transition shadow-md" id="dashboardViewAnalytics">
+                  <i class="fas fa-chart-pie mr-2"></i> Review Trends
+                </button>
+              </div>
+            </div>
+            <div class="glass p-8">
+              <h3 class="text-2xl font-bold mb-4 text-indigo-300">Your Goals</h3>
+              <ul class="list-disc pl-5 text-gray-300 space-y-2">
+                <li>Meditate 3 times this week <span class="text-green-400">(2/3)</span></li>
+                <li>Journal daily <span class="text-yellow-400">(In Progress)</span></li>
+                <li>Complete "Challenging Thoughts" CBT exercise <span class="text-red-400">(Pending)</span></li>
+              </ul>
+              <button class="mt-6 bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition">Manage Goals</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="profileSection" class="p-6 glass animate-fadeIn hidden">
+          <h2 class="text-4xl font-extrabold mb-6 text-gray-100">User Profile & Settings</h2>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="glass-sm p-6">
+              <h3 class="text-2xl font-bold mb-4 text-indigo-300">Account Details</h3>
+              <p class="mb-2"><strong>Username:</strong> <span class="text-gray-400" id="profileUsername">Ranjith_User</span></p>
+              <p class="mb-2"><strong>Email:</strong> <span class="text-gray-400" id="profileEmail">ranjith.k@example.com</span></p>
+              <p><strong>Member Since:</strong> <span class="text-gray-400">October 2025</span></p>
+              <button class="mt-6 bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition"><i class="fas fa-edit mr-2"></i> Edit Profile</button>
+            </div>
+            <div class="glass-sm p-6">
+              <h3 class="text-2xl font-bold mb-4 text-indigo-300">App Preferences</h3>
+              <div class="flex items-center justify-between mb-3">
+                <label for="cbt-mode" class="text-gray-300">CBT Mode Enabled:</label>
+                <input type="checkbox" id="cbt-mode" class="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500" checked>
+              </div>
+              <div class="flex items-center justify-between mb-3">
+                <label for="audio-feedback" class="text-gray-300">Audio Responses:</label>
+                <input type="checkbox" id="audio-feedback" class="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500">
+              </div>
+              <div class="flex items-center justify-between">
+                <label for="notification-reminders" class="text-gray-300">Reminders:</label>
+                <input type="checkbox" id="notification-reminders" class="w-5 h-5 text-indigo-600 bg-gray-700 border-gray-600 rounded focus:ring-indigo-500" checked>
+              </div>
+              <button class="mt-6 bg-yellow-600 text-white py-2 px-4 rounded-lg hover:bg-yellow-700 transition"><i class="fas fa-save mr-2"></i> Save Settings</button>
+            </div>
+          </div>
+          <div class="glass mt-8 p-6">
+            <h3 class="text-2xl font-bold mb-4 text-indigo-300">Security</h3>
+            <button class="bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition"><i class="fas fa-key mr-2"></i> Change Password</button>
+          </div>
+        </section>
+
+        <section id="chatSection" class="p-0 md:p-6 flex flex-col h-screen hidden">
+          <div id="chat" class="flex-1 overflow-y-auto space-y-6 mb-4 md:mb-6 scrollbar-thin glass p-6" aria-live="polite"></div>
+          <div class="chat-input-container relative">
+            <button id="emoji-btn" aria-label="Emoji Picker" title="Insert Emoji"><i class="fas fa-face-smile"></i></button>
+            <input id="message" type="text" placeholder="Share your thoughts with MindMate..." aria-label="Chat message input">
+            <button id="record" aria-label="Record Voice Message" title="Record Voice Message"><i class="fas fa-microphone"></i></button>
+            <button id="send" aria-label="Send Message" title="Send Message"><i class="fas fa-paper-plane"></i></button>
+            <div id="emojiPicker" class="emoji-picker-container hidden"></div>
+          </div>
+        </section>
+
+        <section id="analyticsSection" class="p-6 glass animate-fadeIn hidden">
+          <h2 class="text-4xl font-extrabold mb-4 text-gray-100">Mood Analytics & Trends</h2>
+          <div id="analysisSummary" class="mb-8 text-gray-300 text-xl font-semibold">Dominant Mood: No data (0%)</div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="glass p-4 chart-container animate-chartIn shadow-xl">
+              <h3 class="text-2xl font-bold mb-3 text-indigo-300"><i class="fas fa-chart-bar mr-2"></i> Mood Frequency (Last 7 Days)</h3>
+              <canvas id="barChart"></canvas>
+            </div>
+            <div class="glass p-4 chart-container animate-chartIn shadow-xl">
+              <h3 class="text-2xl font-bold mb-3 text-indigo-300"><i class="fas fa-chart-pie mr-2"></i> Overall Mood Distribution</h3>
+              <canvas id="pieChart"></canvas>
+            </div>
+          </div>
+          <div class="glass mt-8 p-6">
+            <h3 class="text-2xl font-bold mb-4 text-indigo-300">Detailed Mood Log</h3>
+            <ul id="moodLogList" class="space-y-3 max-h-60 overflow-y-auto scrollbar-thin">
+              <li class="flex justify-between items-center text-gray-400"><span>No mood entries yet. Start chatting!</span></li>
+            </ul>
+          </div>
+        </section>
+
+        <section id="cbtSection" class="p-6 glass animate-fadeIn hidden">
+          <h2 class="text-4xl font-extrabold mb-6 text-gray-100">CBT Exercises for Self-Help</h2>
+          <p class="text-xl text-indigo-300 mb-8">Engage with guided exercises to challenge negative thoughts and develop coping skills.</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="cbt-exercise-card">
+              <h3 class="text-xl font-bold mb-3 text-blue-300"><i class="fas fa-lightbulb mr-2"></i> Challenging Thoughts</h3>
+              <p class="text-gray-400 text-sm mb-4">Learn to identify and reframe automatic negative thoughts. (5-10 min)</p>
+              <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">Start Exercise</button>
+            </div>
+            <div class="cbt-exercise-card">
+              <h3 class="text-xl font-bold mb-3 text-green-300"><i class="fas fa-leaf mr-2"></i> Grounding Techniques</h3>
+              <p class="text-gray-400 text-sm mb-4">Quick exercises to bring you back to the present moment. (2-5 min)</p>
+              <button class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">Start Exercise</button>
+            </div>
+            <div class="cbt-exercise-card">
+              <h3 class="text-xl font-bold mb-3 text-purple-300"><i class="fas fa-compass mr-2"></i> Behavioral Activation</h3>
+              <p class="text-gray-400 text-sm mb-4">Plan engaging activities to improve your mood and energy. (10-15 min)</p>
+              <button class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">Start Exercise</button>
+            </div>
+            <div class="cbt-exercise-card">
+              <h3 class="text-xl font-bold mb-3 text-yellow-300"><i class="fas fa-heart mr-2"></i> Gratitude Journaling</h3>
+              <p class="text-gray-400 text-sm mb-4">Cultivate a positive outlook by focusing on what you're thankful for. (5 min)</p>
+              <button class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition">Start Exercise</button>
+            </div>
+          </div>
+          <div class="glass mt-8 p-6 text-center">
+            <p class="text-indigo-200 text-lg">New exercises added regularly! Stay tuned.</p>
+          </div>
+        </section>
+
+        <section id="journalSection" class="p-6 glass animate-fadeIn hidden">
+          <h2 class="text-4xl font-extrabold mb-6 text-gray-100">Your Personal Journal</h2>
+          <p class="text-xl text-indigo-300 mb-8">Reflect on your day, thoughts, and emotions without judgment.</p>
+          <div class="glass-sm p-6 mb-8">
+            <h3 class="text-2xl font-bold mb-4 text-indigo-300">New Entry</h3>
+            <textarea id="journalEntryText" class="w-full p-4 rounded-lg bg-gray-800 text-white border-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="What's on your mind today?"></textarea>
+            <button id="saveJournalEntry" class="mt-4 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition"><i class="fas fa-save mr-2"></i> Save Entry</button>
+          </div>
+          <div class="glass p-6">
+            <h3 class="text-2xl font-bold mb-4 text-indigo-300">Past Entries</h3>
+            <ul id="journalEntriesList" class="space-y-4 max-h-96 overflow-y-auto scrollbar-thin">
+              <li class="journal-entry text-gray-400">No journal entries yet. Start writing!</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div id="authModal" class="hidden fixed inset-0 bg-black bg-opacity-75 backdrop-blur-md flex justify-center items-center z-[1002] animate-fadeIn">
+    <div class="glass p-8 md:p-10 w-full max-w-md relative animate-slideUp">
+      <button id="closeAuth" class="absolute top-4 right-4 text-gray-400 text-3xl hover:text-white transition" aria-label="Close authentication modal">&times;</button>
+      <h2 id="authTitle" class="text-3xl font-extrabold text-center text-indigo-300 mb-8"></h2>
+      <form id="authForm" class="space-y-6"></form>
+      <p class="text-sm text-center mt-6 text-gray-400">Your privacy is our priority.</p>
+    </div>
+  </div>
+
+  <audio id="audio-player" class="hidden"></audio>
+  <button id="openMenu" class="fixed bottom-4 right-4 bg-indigo-600 text-white p-4 rounded-full shadow-2xl z-50 md:hidden transition transform hover:scale-110" aria-label="Open navigation menu">
+    <i class="fas fa-bars text-xl"></i>
+  </button>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const landingPage = document.getElementById('landingPage');
+    const moodPicker = document.getElementById('moodPicker');
+    const mainApp = document.getElementById('mainApp');
+    const dashboardSection = document.getElementById('dashboardSection');
+    const chatSection = document.getElementById('chatSection');
+    const analyticsSection = document.getElementById('analyticsSection');
+    const cbtSection = document.getElementById('cbtSection');
+    const journalSection = document.getElementById('journalSection');
+    const profileSection = document.getElementById('profileSection');
+    const sidebar = document.getElementById('sidebar');
+    const authModal = document.getElementById('authModal');
+    const authTitle = document.getElementById('authTitle');
+    const authForm = document.getElementById('authForm');
+    const chat = document.getElementById('chat');
+    const messageInput = document.getElementById('message');
+    const sendButton = document.getElementById('send');
+    const recordButton = document.getElementById('record');
+    const emojiButton = document.getElementById('emoji-btn');
+    const emojiPicker = document.getElementById('emojiPicker');
+    const analysisSummary = document.getElementById('analysisSummary');
+    const moodSummaryDashboard = document.getElementById('moodSummary');
+    const journalEntryText = document.getElementById('journalEntryText');
+    const saveJournalEntryButton = document.getElementById('saveJournalEntry');
+    const journalEntriesList = document.getElementById('journalEntriesList');
+    const dashboardUsername = document.getElementById('dashboardUsername');
+    const profileUsername = document.getElementById('profileUsername');
+    const profileEmail = document.getElementById('profileEmail');
+
+    let barChart, pieChart;
+    let moodHistory = [];
+    let journalEntries = [];
+    let isLoggedIn = false;
+    let currentUser = { username: 'Ranjith_User', email: 'ranjith.k@example.com' };
+
+    const emojis = ['😊', '😂', '😍', '😭', '🤯', '🥳', '😎', '😇', '🤔', '👍', '🙏', '❤️', '💔', '⚡', '💡', '🌟', '🧘', '🎧', '✍️', '🌱', '☀️', '🌧️', '☔', '🌈'];
+
+    // Utility Functions
+    function initParticles() {
+      const canvas = document.getElementById('particleCanvas');
+      const ctx = canvas.getContext('2d');
+      function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+      resize(); window.addEventListener('resize', resize);
+      const particles = [];
+      for (let i = 0; i < 120; i++) {
+        particles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, size: Math.random() * 5 + 1, speedX: (Math.random() - 0.5) * 0.7, speedY: (Math.random() - 0.5) * 0.7, color: `rgba(150, 200, 255, 0.4)` });
+      }
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+          ctx.fillStyle = p.color; p.x += p.speedX; p.y += p.speedY;
+          if (p.x < 0 || p.x > canvas.width) p.speedX *= -1;
+          if (p.y < 0 || p.y > canvas.height) p.speedY *= -1;
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+        });
+        requestAnimationFrame(animate);
+      }
+      animate();
+    }
+
+    function showView(viewId) {
+      document.querySelectorAll('#sidebar nav a').forEach(a => a.classList.remove('active'));
+      const targetLink = document.getElementById(`show${viewId.replace('Section', '')}`);
+      if (targetLink) targetLink.classList.add('active');
+      
+      dashboardSection.classList.add('hidden');
+      chatSection.classList.add('hidden');
+      analyticsSection.classList.add('hidden');
+      cbtSection.classList.add('hidden');
+      journalSection.classList.add('hidden');
+      profileSection.classList.add('hidden');
+
+      document.getElementById(viewId).classList.remove('hidden');
+
+      if (viewId === 'analyticsSection') updateMoodCharts();
+      if (viewId === 'journalSection') renderJournalEntries();
+      if (viewId === 'profileSection') updateProfileDisplay();
+      
+      if (window.innerWidth < 768) sidebar.classList.remove('show');
+    }
+
+    function loadInitialChat() {
+      if (isLoggedIn) {
+        chat.innerHTML = `
+          <div class="chat-bubble-bot animate-popIn">
+            <p><strong>MindMate:</strong> Welcome back! I'm here to support you. How can I help you feel better or explore your thoughts today?</p>
+          </div>`;
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+
+    function addUserMessage(message) {
+      const div = document.createElement('div');
+      div.classList.add('chat-bubble-user', 'animate-popIn');
+      div.innerHTML = `<p><strong>You:</strong> ${message}</p>`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function addBotMessage(message) {
+      const div = document.createElement('div');
+      div.classList.add('chat-bubble-bot', 'animate-popIn');
+      div.innerHTML = `<p><strong>MindMate:</strong> ${message}</p>`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function sendMessage(message = messageInput.value.trim()) {
+      if (!message || !isLoggedIn) {
+        if (!isLoggedIn) addBotMessage('Please log in to chat!');
+        return;
+      }
+
+      addUserMessage(message);
+      messageInput.value = '';
+      emojiPicker.classList.add('hidden');
+
+      const typingIndicator = document.createElement('div');
+      typingIndicator.classList.add('chat-bubble-bot', 'typing', 'animate-popIn');
+      typingIndicator.textContent = 'MindMate: ';
+      chat.appendChild(typingIndicator);
+      chat.scrollTop = chat.scrollHeight;
+
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: message })
+        });
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        typingIndicator.remove();
+        if (data.reply) {
+          addBotMessage(data.reply);
+        } else {
+          addBotMessage('Sorry, I couldn’t process that. Try again!');
+        }
+
+        const detected_emotion = detectEmotion(message);
+        if (detected_emotion) moodHistory.push({ mood: detected_emotion, timestamp: new Date().toISOString() });
+        updateMoodCharts();
+        updateMoodLog();
+      } catch (error) {
+        typingIndicator.remove();
+        addBotMessage('Error connecting to the server. Please try again later.');
+        console.error('Chat error:', error);
+      }
+    }
+
+    function detectEmotion(message) {
+      const lowerMsg = message.toLowerCase();
+      if (lowerMsg.includes('happy') || lowerMsg.includes('joy') || lowerMsg.includes('😊') || lowerMsg.includes('🥳')) return 'joy';
+      if (lowerMsg.includes('sad') || lowerMsg.includes('down') || lowerMsg.includes('😢') || lowerMsg.includes('💔')) return 'sadness';
+      if (lowerMsg.includes('anxious') || lowerMsg.includes('fear') || lowerMsg.includes('😟') || lowerMsg.includes('🤯')) return 'fear';
+      if (lowerMsg.includes('annoyed') || lowerMsg.includes('frustrated') || lowerMsg.includes('😣')) return 'annoyance';
+      return 'neutral';
+    }
+
+    let recognition;
+    if ('webkitSpeechRecognition' in window) {
+      recognition = new webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recordButton.addEventListener('click', () => {
+        if (!isLoggedIn) return addBotMessage('Please log in to use voice!');
+        if (!recognition) return alert('Speech recognition not supported in this browser.');
+        
+        if (!recordButton.classList.contains('active')) {
+          recordButton.classList.add('active');
+          recognition.start();
+          addBotMessage('MindMate: Recording... Say something for up to 10 seconds.');
+        } else {
+          recognition.stop();
+        }
+      });
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        messageInput.value = transcript;
+        sendMessage(transcript);
+        recordButton.classList.remove('active');
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        recordButton.classList.remove('active');
+        addBotMessage('Error with voice recognition. Please try again or type your message.');
+      };
+
+      recognition.onend = () => {
+        recordButton.classList.remove('active');
+        addBotMessage('Recording ended.');
+      };
+    } else {
+      recordButton.style.display = 'none';
+      addBotMessage('Speech recognition not supported. Please type your message.');
+    }
+
+    function populateEmojiPicker() {
+      emojiPicker.innerHTML = '';
+      emojis.forEach(emoji => {
+        const button = document.createElement('button');
+        button.textContent = emoji;
+        button.setAttribute('aria-label', `Insert ${emoji} emoji`);
+        button.onclick = () => {
+          messageInput.value += emoji;
+          messageInput.focus();
+          emojiPicker.classList.add('hidden');
+        };
+        emojiPicker.appendChild(button);
+      });
+    }
+
+    function updateMoodCharts() {
+      const moodMap = { joy: 0, sadness: 0, fear: 0, annoyance: 0, neutral: 0 };
+      moodHistory.forEach(entry => moodMap[entry.mood]++);
+      const total = Object.values(moodMap).reduce((a, b) => a + b, 0);
+
+      let dominantMood = 'No data';
+      let dominantPercentage = 0;
+      let dominantEmoji = '😐';
+      if (total > 0) {
+        const sortedMoods = Object.entries(moodMap).sort((a, b) => b[1] - a[1]);
+        dominantMood = sortedMoods[0][0];
+        dominantPercentage = ((moodMap[dominantMood] / total) * 100).toFixed(1);
+        dominantEmoji = dominantMood === 'joy' ? '😊' : dominantMood === 'sadness' ? '😢' : dominantMood === 'fear' ? '😟' : dominantMood === 'annoyance' ? '😣' : '😐';
+      }
+
+      moodSummaryDashboard.textContent = dominantEmoji;
+      analysisSummary.textContent = `Dominant Mood: ${dominantMood.charAt(0).toUpperCase() + dominantMood.slice(1)} (${dominantPercentage}%)`;
+
+      if (barChart) barChart.destroy();
+      if (pieChart) pieChart.destroy();
+
+      const chartLabels = ['Joy', 'Sadness', 'Fear', 'Annoyance', 'Neutral'];
+      const chartColors = ['#10b981', '#ef4444', '#f59e0b', '#f97316', '#6b7280'];
+
+      const chartData = {
+        labels: chartLabels,
+        datasets: [{ 
+          data: chartLabels.map(label => moodMap[label.toLowerCase()]), 
+          backgroundColor: chartColors,
+          borderColor: 'rgba(255, 255, 255, 0.5)',
+          borderWidth: 1 
+        }]
+      };
+
+      const commonChartOptions = {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#e5e7eb' } } },
+        animation: { duration: 1200 }
+      };
+
+      barChart = new Chart(document.getElementById('barChart'), { 
+        type: 'bar', 
+        data: chartData, 
+        options: {
+          ...commonChartOptions,
+          scales: {
+            y: { beginAtZero: true, ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+            x: { ticks: { color: '#9ca3af' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }
+          }
+        }
+      });
+      
+      pieChart = new Chart(document.getElementById('pieChart'), { 
+        type: 'pie', 
+        data: chartData, 
+        options: commonChartOptions 
+      });
+    }
+
+    function updateMoodLog() {
+      const moodLogList = document.getElementById('moodLogList');
+      moodLogList.innerHTML = '';
+      if (moodHistory.length === 0) {
+        moodLogList.innerHTML = '<li class="flex justify-between items-center text-gray-400"><span>No mood entries yet. Start chatting!</span></li>';
+        return;
+      }
+      moodHistory.slice().reverse().forEach(entry => {
+        const li = document.createElement('li');
+        li.classList.add('flex', 'justify-between', 'items-center', 'text-gray-300', 'p-2', 'rounded-md', 'hover:bg-gray-800', 'transition');
+        const date = new Date(entry.timestamp).toLocaleString();
+        li.innerHTML = `
+          <span class="font-semibold">${entry.mood.charAt(0).toUpperCase() + entry.mood.slice(1)}</span>
+          <span class="text-sm text-gray-500">${date}</span>
+        `;
+        moodLogList.appendChild(li);
+      });
+    }
+
+    function renderJournalEntries() {
+      journalEntriesList.innerHTML = '';
+      if (journalEntries.length === 0) {
+        journalEntriesList.innerHTML = '<li class="journal-entry text-gray-400">No journal entries yet. Start writing!</li>';
+        return;
+      }
+      journalEntries.slice().reverse().forEach((entry, index) => {
+        const li = document.createElement('li');
+        li.classList.add('journal-entry');
+        li.innerHTML = `
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="text-lg font-semibold text-indigo-200">Entry from ${new Date(entry.timestamp).toLocaleString()}</h4>
+            <button class="text-red-400 hover:text-red-500 transition" onclick="deleteJournalEntry(${entry.id})" title="Delete entry"><i class="fas fa-trash"></i></button>
+          </div>
+          <p class="text-gray-300 text-sm">${entry.text.substring(0, 200)}...</p>
+          <button class="text-blue-400 hover:text-blue-500 transition mt-2 text-sm" onclick="alert('Full entry: ${entry.text}')">Read More</button>
+        `;
+        journalEntriesList.appendChild(li);
+      });
+    }
+
+    function addJournalEntry() {
+      const text = journalEntryText.value.trim();
+      if (text) {
+        const newEntry = { id: Date.now(), text: text, timestamp: new Date().toISOString() };
+        journalEntries.push(newEntry);
+        journalEntryText.value = '';
+        renderJournalEntries();
+        alert('Journal entry saved!');
+      } else {
+        alert('Journal entry cannot be empty.');
+      }
+    }
+
+    window.deleteJournalEntry = (id) => {
+      if (confirm('Are you sure you want to delete this entry?')) {
+        journalEntries = journalEntries.filter(entry => entry.id !== id);
+        renderJournalEntries();
+        alert('Entry deleted.');
+      }
+    }
+
+    function updateProfileDisplay() {
+      dashboardUsername.textContent = currentUser.username;
+      profileUsername.textContent = currentUser.username;
+      profileEmail.textContent = currentUser.email;
+    }
+
+    function showAuth(type) {
+      authModal.classList.remove('hidden');
+      authTitle.textContent = type === 'login' ? 'Welcome Back!' : 'Join MindMate!';
+      
+      authForm.innerHTML = `
+        <input id="authUsername" type="text" placeholder="Username" required class="w-full p-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-2 focus:ring-indigo-500 transition" aria-label="Username"/>
+        ${type === 'signup' ? '<input id="authEmail" type="email" placeholder="Email" required class="w-full p-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-2 focus:ring-indigo-500 transition" aria-label="Email"/>' : ''}
+        <input id="authPassword" type="password" placeholder="Password" required class="w-full p-3 rounded-lg bg-gray-700 text-white border border-gray-600 focus:ring-2 focus:ring-indigo-500 transition" aria-label="Password"/>
+        <button id="authSubmit" type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition animate-popIn">${type === 'login' ? 'Login' : 'Signup'}</button>
+        <p class="text-center text-sm mt-3 text-indigo-300 cursor-pointer hover:text-indigo-400 transition" onclick="switchAuthMode('${type === 'login' ? 'signup' : 'login'}')">
+          ${type === 'login' ? 'New user? Sign Up' : 'Already have an account? Log In'}
+        </p>
+      `;
+      
+      window.switchAuthMode = (newType) => showAuth(newType);
+
+      authForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('authUsername').value.trim();
+        const password = document.getElementById('authPassword').value.trim();
+        const emailInput = document.getElementById('authEmail');
+        const email = type === 'signup' && emailInput ? emailInput.value.trim() : '';
+
+        if (!username || !password || (type === 'signup' && (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))) {
+          alert('Please fill in all fields correctly.');
+          return;
+        }
+
+        currentUser.username = username;
+        currentUser.email = email || currentUser.email;
+        isLoggedIn = true;
+        authModal.classList.add('hidden');
+        landingPage.classList.add('hidden');
+        mainApp.classList.remove('hidden');
+        moodPicker.classList.remove('hidden');
+        showView('dashboardSection');
+        loadInitialChat();
+        updateProfileDisplay();
+        alert(`Success! You have ${type === 'login' ? 'Logged in' : 'Signed up'} successfully.`);
+      };
+    }
+
+    // Event Listeners
+    document.getElementById('showLoginLanding').addEventListener('click', () => showAuth('login'));
+    document.getElementById('showSignupLanding').addEventListener('click', () => showAuth('signup'));
+    document.getElementById('closeAuth').addEventListener('click', () => authModal.classList.add('hidden'));
+
+    document.querySelectorAll('.moodBtn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.moodBtn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        setTimeout(() => {
+          moodPicker.classList.add('hidden');
+          showView('chatSection');
+          sendMessage(`I feel ${btn.dataset.mood}`);
+        }, 500);
+      });
+    });
+
+    sendButton.addEventListener('click', () => {
+      if (messageInput.value.trim()) sendMessage();
+      else addBotMessage('Please type a message before sending!');
+    });
+    messageInput.addEventListener('keypress', e => { if (e.key === 'Enter' && messageInput.value.trim()) sendMessage(); });
+
+    emojiButton.addEventListener('click', () => emojiPicker.classList.toggle('hidden'));
+    document.addEventListener('click', (event) => {
+      if (!emojiPicker.contains(event.target) && !emojiButton.contains(event.target) && !emojiPicker.classList.contains('hidden')) {
+        emojiPicker.classList.add('hidden');
+      }
+    });
+
+    saveJournalEntryButton.addEventListener('click', addJournalEntry);
+
+    document.getElementById('showDashboard').addEventListener('click', (e) => { e.preventDefault(); showView('dashboardSection'); });
+    document.getElementById('showChat').addEventListener('click', (e) => { e.preventDefault(); showView('chatSection'); });
+    document.getElementById('showAnalytics').addEventListener('click', (e) => { e.preventDefault(); showView('analyticsSection'); });
+    document.getElementById('showCBT').addEventListener('click', (e) => { e.preventDefault(); showView('cbtSection'); });
+    document.getElementById('showJournal').addEventListener('click', (e) => { e.preventDefault(); showView('journalSection'); });
+    document.getElementById('showProfile').addEventListener('click', (e) => { e.preventDefault(); showView('profileSection'); });
+
+    document.getElementById('dashboardStartChat').addEventListener('click', () => showView('chatSection'));
+    document.getElementById('dashboardViewAnalytics').addEventListener('click', () => showView('analyticsSection'));
+
+    document.getElementById('openMenu').addEventListener('click', () => sidebar.classList.add('show'));
+    document.getElementById('closeSidebar').addEventListener('click', () => sidebar.classList.remove('show'));
+
+    // Initializations
+    initParticles();
+    populateEmojiPicker();
+  });
+</script>
+</body>
+</html>
