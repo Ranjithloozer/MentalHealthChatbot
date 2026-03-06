@@ -20,3 +20,4 @@ SpeechRecognition
 gTTS
 langdetect
 deep-translator
+gunicorn
